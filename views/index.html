@@ -11,11 +11,44 @@
       window.electronRequire = require;
     </script>
 
+    <script>_require = window.require; _define = window.define; _module = window.module; window.require = undefined; window.define = undefined; window.module = undefined;</script>
     <script type="text/javascript" src="../node_modules/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="../node_modules/packery/dist/packery.pkgd.js"></script>
+    <script type="text/javascript" src="../node_modules/draggabilly/dist/draggabilly.pkgd.min.js"></script>
+    <script>window.require = _require; window.define = _define; window.module = _module;</script>
     <script type="text/javascript" src="../node_modules/react/dist/react.js"></script>
     <script type="text/javascript" src="../node_modules/react-dom/dist/react-dom.js"></script>
-    <script type="text/javascript" src="../node_modules/hammerjs/hammer.min.js"></script>
+    <script type="text/javascript" src="../node_modules/hammerjs/hammer.js"></script>
     <script type="text/javascript" src="../node_modules/materialize-css/dist/js/materialize.js"></script>
+
+    <style type="text/css">
+      .note-item h1, .note-item h2, .note-item h3 {
+        margin: 0 0 8px;
+      }
+      .note-item h1 {
+        font-size: 30px;
+      }
+      .note-item h2 {
+        font-size: 24px;
+      }
+      .note-item h3 {
+        font-size: 18px;
+      }
+      .note-item ul {
+        margin: 0 0 8px;
+        list-style-type: disc !important;
+        padding-left: 24px;
+      }
+      .note-item ul li {
+        list-style-type: disc !important;
+      }
+      .note-item p {
+        margin: 0 0 8px;
+      }
+      .note-item > :last-child {
+        margin: 0;
+      }
+    </style>
   </head>
   <body class="grey lighten-4">
     <div id="root"></div>

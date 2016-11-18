@@ -1,4 +1,5 @@
 import { Api } from './api';
+var marked = electronRequire('marked');
 
 var api = new Api('http://127.0.0.1:8000');
 
@@ -12,7 +13,7 @@ class Header extends React.Component {
         if (this.props.page.state.isAuthorized) {
             menu = (
                 <ul id="nav-mobile" className="right hide-on-med-and-down">
-                    <li><a href="#" onClick={() => $('#add-note-modal').modal('open')}>
+                    <li><a href="#" onClick={() => addNoteModal.openToCreate()}>
                         <i className="material-icons left">add</i>
                         Add
                     </a></li>
@@ -63,22 +64,39 @@ class AddNoteModal extends React.Component {
             '#616161',
         ];
         this.state = {
-            body: this.props.body || '',
-            color: this.props.color || this.colors[0]
+            id: null,
+            body: '',
+            color: this.colors[0]
         };
     }
     selectColor(color) {
         this.setState({color: color});
     }
+    openToCreate() {
+        this.setState({
+            id: null,
+            body: '',
+            color: this.colors[0]
+        }, () => $('#add-note-modal').modal('open'));
+    }
+    openToEdit(note) {
+        this.setState({
+            id: note.id,
+            body: note.body,
+            color: '#' + note.color.toLowerCase()
+        }, () => $('#add-note-modal').modal('open'));
+        // var self = this;
+        // window.setTimeout(() => self.setState({body: 'asd'}), 1000)
+    }
     save() {
         var self = this;
         var callback = () => {
-            $('#add-note-modal').modal('close');
+            // $('#add-note-modal').modal('close');
             list.refresh();
         };
-        if (this.props.id) {
+        if (this.state.id) {
             console.log('Update note');
-            api.updateNote(this.props.id, this.state.body, this.state.color, callback);
+            api.updateNote(this.state.id, this.state.body, this.state.color, callback);
         } else {
             console.log('Create note');
             api.createNote(this.state.body, this.state.color, callback);
@@ -88,8 +106,13 @@ class AddNoteModal extends React.Component {
         return (
             <div id="add-note-modal" className="modal">
                 <div className="modal-content">
-                    <h4>Add Note</h4>
-                    <textarea className="materialize-textarea" defaultValue="" onChange={(e) => this.setState({body: e.target.value})}></textarea>
+                    <h4>{this.state.id ? 'Edit note' : 'Add Note'}</h4>
+                    <textarea
+                        className="materialize-textarea"
+                        value={this.state.body}
+                        onChange={(e) => this.setState({body: e.target.value})}
+                        style={{fontFamily: 'Monospace, DejaVu Sans Mono, Fura Mono, Courier, Courier New'}}
+                    ></textarea>
                     <div className="row">
                         {this.colors.map(((color) => {
                             var isCurrent = this.state.color == color;
@@ -116,7 +139,7 @@ class NoteItem extends React.Component {
         var g = parseInt(str.substr(2, 2), 16);
         var b = parseInt(str.substr(4, 2), 16);
         var a = 1 - ( 0.299 * r + 0.587 * r + 0.114 * b) / 255;
-        if (a < 0.5) {
+        if (a < 0.4) {
             // bright colors - black font
             return '#000000';
         } else {
@@ -125,13 +148,24 @@ class NoteItem extends React.Component {
         }
     }
     render() {
+        var fontSize = 14;
+
+        if (this.props.data.body.length < 32 && this.props.data.body.split('\n').length < 2) {
+            fontSize = 24;
+        }
+
         return (
-            <div className="card-panel" style={{
+            <div
+                className="card-panel note-item"
+                style={{
                     backgroundColor: '#' + this.props.data.color,
-                    color: this.getContrastingColor(this.props.data.color)
-                }}>
-                Abc
-                {this.props.data.content}
+                    color: this.getContrastingColor(this.props.data.color),
+                    cursor: 'pointer',
+                    fontSize: fontSize,
+                }}
+                dangerouslySetInnerHTML={{__html: marked(this.props.data.body)}}
+                onClick={() => addNoteModal.openToEdit(this.props.data)}
+                >
             </div>
         )
     }
@@ -167,10 +201,10 @@ class List extends React.Component {
             return (
                 <div>
                     <h1>List</h1>
-                    <div className="row">
+                    <div className="row grid-list">
                         {this.state.notes.map((note) => {
                             return (
-                                <div className="col s12 m4" key={note.id.toString()}>
+                                <div className="col s12 m4 grid-item" key={note.id.toString()}>
                                     <NoteItem data={note} />
                                 </div>
                             );
@@ -180,6 +214,35 @@ class List extends React.Component {
             )
         }
     }
+    // componentDidMount() {
+    //     var $this = $(ReactDOM.findDOMNode(this));
+    //     var $grid = $this.find('.grid-list').packery({
+    //         itemSelector: '.grid-item',
+    //         gutter: 0,
+    //         originLeft: true,
+    //         originTop: true
+    //         // isHorizontal: true
+    //     });
+
+    //     $grid.packery( 'on', 'dragItemPositioned', function( pckryInstance, draggedItem ) {
+    //         setTimeout(function(){
+    //             $grid.packery();
+    //         },100); 
+    //     });
+
+    //     console.log('Grid:', $grid.get(), $grid.find('.grid-item').get());
+
+    //     // make all grid-items draggable
+    //     $grid.find('.grid-item').each( function( i, gridItem ) {
+    //         var draggie = new Draggabilly( gridItem );
+    //         console.log(draggie);
+    //         // bind drag events to Packery
+    //         $grid.packery( 'bindDraggabillyEvents', draggie );
+    //     });
+    // }
+    // componentDidUpdate(prevProps, prevState) {
+    //     this.componentDidMount();
+    // }
 }
 
 class LoginTab extends React.Component {
@@ -322,6 +385,12 @@ class App extends React.Component {
 $(document).ready(function(){
     // the "href" attribute of .modal-trigger must specify the modal ID that wants to be triggered
     $('.modal').modal();
+
+    $(document).on('mouseenter', '.note-item', (e) => {
+        $(e.target).closest('.note-item').addClass('z-depth-4');
+    }).on('mouseleave', '.note-item', (e) => {
+        $(e.target).closest('.note-item').removeClass('z-depth-4');
+    });
 });
 
 ReactDOM.render(

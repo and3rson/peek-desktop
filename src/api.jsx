@@ -99,6 +99,26 @@ export class Api {
     }
 
     updateNote(id, body, color, callback) {
-        callback();
+        storage.get('authToken', (error, data) => {
+            console.log(body, color);
+            this._request(fetch(this.host + '/api/notes/' + id + '/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // TODO: Implement auth
+                    'Authorization': 'Token ' + data.value
+                },
+                body: JSON.stringify({
+                    'body': body,
+                    'color': color.replace(/^#/, '')
+                })
+            }), (response, error) => {
+                if (error) {
+                    console.log('Error creating note:', error);
+                } else {
+                    callback();
+                }
+            });
+        });
     }
 }
