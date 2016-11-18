@@ -181,8 +181,13 @@ class List extends React.Component {
         this.refresh();
         list = this;
     }
-    refresh() {
+    refresh(showSpinner) {
         var self = this;
+        if (showSpinner) {
+            this.setState({
+                isLoading: true
+            });
+        }
         api.getNotes((res, e) => {
             if (e) {
                 console.log('Error:', e);
@@ -194,12 +199,27 @@ class List extends React.Component {
             }
         });
     }
+    spin(el) {
+        var $el = $(el);
+        $el.css('opacity', '1');
+        $el.css('transition', 'all 0.4s ease-out');
+        $el.css('transform', 'rotate(720deg) scale(5)');
+        $el.css('transform-origin', '50% 50%');
+        $el.css('opacity', '0');
+        window.setTimeout(() => {
+            $el.css('transform', 'rotate(0deg) scale(1)');
+            $el.css('opacity', '1');
+        }, 400);
+    }
     render() {
         if (this.state.isLoading) {
             return <LoadingSpinner />;
         } else {
             return (
                 <div>
+                    <a href="#" className="right red-text text-darken-2" onClick={(e) => { this.spin(e.target); list.refresh() }}>
+                        <i className="material-icons">refresh</i>
+                    </a>
                     <h1>List</h1>
                     <div className="row grid-list">
                         {this.state.notes.map((note) => {
