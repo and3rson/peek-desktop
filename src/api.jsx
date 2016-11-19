@@ -3,46 +3,64 @@ const storage = electronRequire('electron-json-storage');
 export class Api {
     constructor(host) {
         this.host = host.replace(/\/$/, '');
+        this.pollTimeout = null;
+        this.pollCallback = null;
     }
 
-    _request(promise, callback) {
-        return promise.then(
-            (response) => {
-                if (response.status >= 400) {
-                    throw response;
-                }
-                return response;
+    request(method, url, data, callback) {
+        storage.get('authToken', (error, tokenData) => {
+            var authToken = tokenData.value;
+
+            var headers = {
+                'Content-Type': 'application/json'
+            };
+            if (authToken) {
+                headers['Authorization'] = 'Token ' + authToken;
             }
-        ).then(
-            (response) => response.json()
-        ).then(
-            (response) => callback(response, null)
-        ).catch(
-            (error) => callback(null, error)
-        );
+
+            var options = {
+                method: method,
+                headers: headers,
+            };
+            if (method != 'GET' && method != 'OPTIONS') {
+                var body = JSON.stringify(data);
+                options.body = body;
+                console.log(method, url, body);
+            } else {
+                console.log(method, url);
+            }
+
+            fetch(this.host + url, options).then(
+                (response) => {
+                    if (response.status >= 400) {
+                        throw response;
+                    }
+                    return response;
+                }
+            ).then(
+                (response) => response.json()
+            ).then(
+                (response) => callback(response, null)
+            ).catch(
+                (error) => callback(null, error)
+            );
+        });
     }
 
     getNotes(callback) {
-        storage.get('authToken', (error, data) => {
-            this._request(fetch(this.host + '/api/notes/', {
-                headers: {
-                    // TODO: Implement auth
-                    'Authorization': 'Token ' + data.value
-                }
-            }), callback)
-        });
+        this.request('GET', '/api/notes/', {}, callback)
     }
 
     getAuthorized(callback) {
         storage.get('authToken', (error, data) => {
             if (data.value) {
-                this._request(fetch(this.host + '/api/notes/', {
-                    headers: {
-                        'Authorization': 'Token ' + data.value
+                this.request('GET', '/api/notes/', {}, (response, error) => {
+                    if (error) {
+                        console.log('Clearing authToken');
+                        storage.remove('authToken', () => callback(!error));
+                    } else {
+                        callback(!error);
                     }
-                }), (response, error) => {
-                    console.log('Auth request result:', response, error);
-                    callback(!!response);
                 });
             } else {
                 callback(false);
@@ -51,20 +69,16 @@ export class Api {
     }
 
     authorize(username, password, callback) {
-        this._request(fetch(this.host + '/api/auth/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                'username': username,
-                'password': password
-            })
-        }), (response, error) => {
-            console.log(response, error);
+        this.request('POST', '/api/auth/', {
+            'username': username,
+            'password': password
+        }, (response, error) => {
+            console.log('Auth', response, error);
             if (error) {
+                console.log('Auth failed');
                 callback(false);
             } else {
+                console.log('Auth successful, saving authToken');
                 storage.set('authToken', {value: response.token}, () => callback(true));
             }
         });
@@ -75,50 +89,61 @@ export class Api {
     }
 
     createNote(body, color, callback) {
-        storage.get('authToken', (error, data) => {
-            console.log(body, color);
-            this._request(fetch(this.host + '/api/notes/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // TODO: Implement auth
-                    'Authorization': 'Token ' + data.value
-                },
-                body: JSON.stringify({
-                    'body': body,
-                    'color': color.replace(/^#/, '')
-                })
-            }), (response, error) => {
-                if (error) {
-                    console.log('Error creating note:', error);
-                } else {
-                    callback();
-                }
-            });
+        this.request('POST', '/api/notes/', {
+            'body': body,
+            'color': color.replace(/^#/, '')
+        }, (response, error) => {
+            if (error) {
+                console.log('Error creating note:', error);
+            } else {
+                callback();
+            }
         });
     }
 
     updateNote(id, body, color, callback) {
-        storage.get('authToken', (error, data) => {
-            console.log(body, color);
-            this._request(fetch(this.host + '/api/notes/' + id + '/', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // TODO: Implement auth
-                    'Authorization': 'Token ' + data.value
-                },
-                body: JSON.stringify({
-                    'body': body,
-                    'color': color.replace(/^#/, '')
-                })
-            }), (response, error) => {
-                if (error) {
-                    console.log('Error creating note:', error);
-                } else {
-                    callback();
-                }
-            });
+        this.request('PATCH', '/api/notes/' + id + '/', {
+            'body': body,
+            'color': color.replace(/^#/, '')
+        }, (response, error) => {
+            if (error) {
+                console.log('Error creating note:', error);
+            } else {
+                callback();
+            }
+        });
+    }
+
+    setPollCallback(callback) {
+        this.pollCallback = callback;
+    }
+
+    poll() {
+        var self = this;
+        if (this.pollTimeout !== null) {
+            window.clearTimeout();
+        }
+        this.getAuthorized((isAuthorized) => {
+            if (isAuthorized) {
+                console.log('Polling...');
+
+                self.request('GET', '/api/notes/poll/', {}, (response, error) => {
+                    if (error) {
+                        console.log('Polling error. Setting timeout...');
+                        console.log(error);
+                        this.pollTimeout = window.setTimeout(() => {
+                            self.poll();
+                        }, 5000);
+                    } else {
+                        if (this.pollCallback) {
+                            response.events.forEach(self.pollCallback);
+                        }
+                        window.setTimeout(() => self.poll(), 0);
+                    }
+                });
+            } else {
+                console.log('Not authorized, not polling.');
+            }
         });
     }
 }

@@ -92,7 +92,7 @@ class AddNoteModal extends React.Component {
         var self = this;
         var callback = () => {
             // $('#add-note-modal').modal('close');
-            list.refresh();
+            // list.refresh();
         };
         if (this.state.id) {
             console.log('Update note');
@@ -202,14 +202,14 @@ class List extends React.Component {
     spin(el) {
         var $el = $(el);
         $el.css('opacity', '1');
-        $el.css('transition', 'all 0.4s ease-out');
+        $el.css('transition', 'all 0.2s ease-out');
         $el.css('transform', 'rotate(720deg) scale(5)');
         $el.css('transform-origin', '50% 50%');
         $el.css('opacity', '0');
         window.setTimeout(() => {
             $el.css('transform', 'rotate(0deg) scale(1)');
             $el.css('opacity', '1');
-        }, 400);
+        }, 200);
     }
     render() {
         if (this.state.isLoading) {
@@ -346,6 +346,7 @@ class Page extends React.Component {
                 isAuthorized: isAuthorized
             });
         });
+        api.poll();
     }
     logOut() {
         api.logOut(() => this.setState({
@@ -411,6 +412,24 @@ $(document).ready(function(){
     }).on('mouseleave', '.note-item', (e) => {
         $(e.target).closest('.note-item').removeClass('z-depth-4');
     });
+
+    api.setPollCallback((event) => {
+        console.log('Got event:', event);
+        if (event.type == 'created') {
+            list.state.notes.unshift(event.instance);
+            list.setState({notes: list.state.notes});
+        } else if (event.type == 'updated') {
+            list.state.notes.forEach((el, i, arr) => {
+                if (el.id == event.instance.id) {
+                    arr[i] = event.instance;
+                }
+            });
+            list.setState({notes: list.state.notes});
+        }
+        // console.log(event.type);
+        // list.refresh();
+    });
+    api.poll();
 });
 
 ReactDOM.render(
