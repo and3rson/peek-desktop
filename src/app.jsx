@@ -25,21 +25,42 @@ class Header extends React.Component {
         var menu = null;
         if (this.props.page.state.isAuthorized) {
             menu = (
-                <ul id="nav-mobile" className="right hide-on-med-and-down">
-                    <li><a href="#" onClick={(e) => { this.spin(e.target); list.refresh() }}>
-                        <i className="material-icons">refresh</i>
-                    </a></li>
+                <ul id="nav-mobile" className="right">
                     <li><a href="#" onClick={() => addNoteModal.openToCreate()}>
-                        <i className="material-icons left">add</i>
-                        Add
+                        <span className="hide-on-med-and-down">
+                            <i className="material-icons left">add</i>
+                            Add
+                        </span>
+                        <span className="hide-on-large-only">
+                            <i className="material-icons">add</i>
+                        </span>
+                    </a></li>
+                    <li><a href="#" onClick={(e) => { this.spin($(e.target).closest('a').find('i')); list.refresh() }}>
+                        <span className="hide-on-med-and-down">
+                            <i className="material-icons left">refresh</i>
+                            Refresh
+                        </span>
+                        <span className="hide-on-large-only">
+                            <i className="material-icons">refresh</i>
+                        </span>
                     </a></li>
                     <li><a href="#" onClick={() => this.props.page.switchPage('settings')}>
-                        <i className="material-icons left">settings</i>
-                        Settings
+                        <span className="hide-on-med-and-down">
+                            <i className="material-icons left">settings</i>
+                            Settings
+                        </span>
+                        <span className="hide-on-large-only">
+                            <i className="material-icons">settings</i>
+                        </span>
                     </a></li>
                     <li><a href="#" onClick={() => this.props.page.logOut()}>
-                        <i className="material-icons left">exit_to_app</i>
-                        Log out
+                        <span className="hide-on-med-and-down">
+                            <i className="material-icons left">exit_to_app</i>
+                            Log out
+                        </span>
+                        <span className="hide-on-large-only">
+                            <i className="material-icons">exit_to_app</i>
+                        </span>
                     </a></li>
                 </ul>
             );
@@ -178,6 +199,7 @@ class NoteItem extends React.Component {
                     color: this.getContrastingColor(this.props.data.color),
                     cursor: 'pointer',
                     fontSize: fontSize,
+                    wordWrap: 'break-word'
                 }}
                 dangerouslySetInnerHTML={{__html: marked(this.props.data.body)}}
                 onClick={() => addNoteModal.openToEdit(this.props.data)}
@@ -220,11 +242,11 @@ class List extends React.Component {
             return <LoadingSpinner />;
         } else {
             return (
-                <div>
+                <div style={{paddingTop: '1rem'}}>
                     <div className="row grid-list">
                         {this.state.notes.map((note) => {
                             return (
-                                <div className="col s12 m4 grid-item" key={note.id.toString()}>
+                                <div className="col s12 m6 l4 grid-item" key={note.id.toString()}>
                                     <NoteItem data={note} />
                                 </div>
                             );
@@ -234,35 +256,40 @@ class List extends React.Component {
             )
         }
     }
-    // componentDidMount() {
-    //     var $this = $(ReactDOM.findDOMNode(this));
-    //     var $grid = $this.find('.grid-list').packery({
-    //         itemSelector: '.grid-item',
-    //         gutter: 0,
-    //         originLeft: true,
-    //         originTop: true
-    //         // isHorizontal: true
-    //     });
+    componentDidMount() {
+        console.log('mount');
+        var $this = $(ReactDOM.findDOMNode(this));
+        var $grid = $this.find('.grid-list');
+        $grid.packery('destroy');
+        $grid.packery({
+            itemSelector: '.grid-item',
+            gutter: 0,
+            // originLeft: true,
+            // originTop: true
+            // isHorizontal: true
+        });
 
-    //     $grid.packery( 'on', 'dragItemPositioned', function( pckryInstance, draggedItem ) {
-    //         setTimeout(function(){
-    //             $grid.packery();
-    //         },100); 
-    //     });
+        // $grid.packery( 'on', 'dragItemPositioned', function( pckryInstance, draggedItem ) {
+        //     setTimeout(function(){
+        //         $grid.packery();
+        //     }, 10); 
+        // });
+
+        // // make all grid-items draggable
+        // $grid.find('.grid-item').each( function( i, gridItem ) {
+        //     var draggie = new Draggabilly( gridItem );
+        //     console.log(draggie);
+        //     // bind drag events to Packery
+        //     $grid.packery( 'bindDraggabillyEvents', draggie );
+        // });
+    }
 
     //     console.log('Grid:', $grid.get(), $grid.find('.grid-item').get());
 
-    //     // make all grid-items draggable
-    //     $grid.find('.grid-item').each( function( i, gridItem ) {
-    //         var draggie = new Draggabilly( gridItem );
-    //         console.log(draggie);
-    //         // bind drag events to Packery
-    //         $grid.packery( 'bindDraggabillyEvents', draggie );
-    //     });
     // }
-    // componentDidUpdate(prevProps, prevState) {
-    //     this.componentDidMount();
-    // }
+    componentDidUpdate(prevProps, prevState) {
+        this.componentDidMount();
+    }
 }
 
 class LoginTab extends React.Component {
