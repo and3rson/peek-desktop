@@ -8,11 +8,27 @@ var list = null;
 var addNoteModal = null;
 
 class Header extends React.Component {
+    spin(el) {
+        var $el = $(el);
+        $el.css('opacity', '1');
+        $el.css('transition', 'all 0.3s ease-out');
+        $el.css('transform', 'rotate(360deg) scale(1.25)');
+        $el.css('transform-origin', '50% 50%');
+        // $el.css('opacity', '0');
+        window.setTimeout(() => {
+            $el.css('transition', 'none');
+            $el.css('transform', 'rotate(0deg) scale(1)');
+            $el.css('opacity', '1');
+        }, 300);
+    }
     render() {
         var menu = null;
         if (this.props.page.state.isAuthorized) {
             menu = (
                 <ul id="nav-mobile" className="right hide-on-med-and-down">
+                    <li><a href="#" onClick={(e) => { this.spin(e.target); list.refresh() }}>
+                        <i className="material-icons">refresh</i>
+                    </a></li>
                     <li><a href="#" onClick={() => addNoteModal.openToCreate()}>
                         <i className="material-icons left">add</i>
                         Add
@@ -199,28 +215,12 @@ class List extends React.Component {
             }
         });
     }
-    spin(el) {
-        var $el = $(el);
-        $el.css('opacity', '1');
-        $el.css('transition', 'all 0.2s ease-out');
-        $el.css('transform', 'rotate(720deg) scale(5)');
-        $el.css('transform-origin', '50% 50%');
-        $el.css('opacity', '0');
-        window.setTimeout(() => {
-            $el.css('transform', 'rotate(0deg) scale(1)');
-            $el.css('opacity', '1');
-        }, 200);
-    }
     render() {
         if (this.state.isLoading) {
             return <LoadingSpinner />;
         } else {
             return (
                 <div>
-                    <a href="#" className="right red-text text-darken-2" onClick={(e) => { this.spin(e.target); list.refresh() }}>
-                        <i className="material-icons">refresh</i>
-                    </a>
-                    <h1>List</h1>
                     <div className="row grid-list">
                         {this.state.notes.map((note) => {
                             return (
@@ -374,7 +374,7 @@ class Page extends React.Component {
             );
         } else if (state == 'settings') {
             content = (
-                <h1>Settings</h1>
+                <h1>Settings (TODO)</h1>
             );
         } else if (state == 'login') {
             content = (
