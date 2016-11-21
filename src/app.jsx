@@ -1,8 +1,11 @@
 import { Api } from './api';
+// import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
+
 var marked = electronRequire('marked');
 
 var api = new Api('http://127.0.0.1:8000');
 
+var application = null;
 var page = null;
 var list = null;
 var addNoteModal = null;
@@ -23,44 +26,53 @@ class Header extends React.Component {
     }
     render() {
         var menu = null;
+        var add = null, refresh = null;
+        console.log('Render HEADER', this.props.selected);
         if (this.props.page.state.isAuthorized) {
+            if (this.props.page.state.selected == 'list') {
+                add = (
+                    <li><a
+                            href="#"
+                            onClick={() => addNoteModal.openToCreate()}
+                            className="waves-effect waves-default tooltipped"
+                        >
+                        <i className="material-icons">add</i>
+                    </a></li>
+                );
+                refresh = (
+                    <li><a
+                            href="#"
+                            onClick={(e) => {
+                                this.props.page.refresh();
+                                // page.setState({
+                                //     selected: 'list'
+                                // });
+                                this.spin($(e.target).closest('a').find('i'));
+                                list.refresh()
+                            }}
+                            className="waves-effect waves-default tooltipped"
+                        >
+                        <i className="material-icons">refresh</i>
+                    </a></li>
+                );
+            }
             menu = (
                 <ul id="nav-mobile" className="right">
-                    <li><a href="#" onClick={() => addNoteModal.openToCreate()}>
-                        <span className="hide-on-med-and-down">
-                            <i className="material-icons left">add</i>
-                            Add
-                        </span>
-                        <span className="hide-on-large-only">
-                            <i className="material-icons">add</i>
-                        </span>
+                    {add}
+                    {refresh}
+                    <li><a
+                            href="#"
+                            onClick={() => this.props.page.switchPage('settings')}
+                            className="waves-effect waves-default tooltipped"
+                        >
+                        <i className="material-icons">settings</i>
                     </a></li>
-                    <li><a href="#" onClick={(e) => { this.spin($(e.target).closest('a').find('i')); list.refresh() }}>
-                        <span className="hide-on-med-and-down">
-                            <i className="material-icons left">refresh</i>
-                            Refresh
-                        </span>
-                        <span className="hide-on-large-only">
-                            <i className="material-icons">refresh</i>
-                        </span>
-                    </a></li>
-                    <li><a href="#" onClick={() => this.props.page.switchPage('settings')}>
-                        <span className="hide-on-med-and-down">
-                            <i className="material-icons left">settings</i>
-                            Settings
-                        </span>
-                        <span className="hide-on-large-only">
-                            <i className="material-icons">settings</i>
-                        </span>
-                    </a></li>
-                    <li><a href="#" onClick={() => this.props.page.logOut()}>
-                        <span className="hide-on-med-and-down">
-                            <i className="material-icons left">exit_to_app</i>
-                            Log out
-                        </span>
-                        <span className="hide-on-large-only">
-                            <i className="material-icons">exit_to_app</i>
-                        </span>
+                    <li><a
+                            href="#"
+                            onClick={() => this.props.page.logOut()}
+                            className="waves-effect waves-default tooltipped"
+                        >
+                        <i className="material-icons">exit_to_app</i>
                     </a></li>
                 </ul>
             );
@@ -71,10 +83,16 @@ class Header extends React.Component {
             );
         }
         return (
-            <nav>
-                <div className="nav-wrapper red darken-2">
+            <nav className="nav-transparent">
+                <div className="nav-wrapper">
                     <div className="container">
-                        <a href="#" className="brand-logo" onClick={() => this.props.page.switchPage('list')}>Peek</a>
+                        <a
+                            href="#"
+                            className="brand-logo"
+                            onClick={() => this.props.page.switchPage('list')}
+                        >
+                            peek
+                        </a>
                         {menu}
                     </div>
                 </div>
@@ -127,16 +145,29 @@ class AddNoteModal extends React.Component {
     }
     save() {
         var self = this;
-        var callback = () => {
-            // $('#add-note-modal').modal('close');
+        var callback = (response, error) => {
+            if (error) {
+                Materialize.toast('Failed to save note:<br />' + error, 5000);
+            } else {
+                $('#add-note-modal').modal('close');
+            }
             // list.refresh();
         };
         if (this.state.id) {
             console.log('Update note');
-            api.updateNote(this.state.id, this.state.body, this.state.color, callback);
+            api.updateNote(
+                this.state.id,
+                this.state.body,
+                this.state.color,
+                callback
+            );
         } else {
             console.log('Create note');
-            api.createNote(this.state.body, this.state.color, callback);
+            api.createNote(
+                this.state.body,
+                this.state.color,
+                callback
+            );
         }
     }
     render() {
@@ -148,22 +179,42 @@ class AddNoteModal extends React.Component {
                         className="materialize-textarea"
                         value={this.state.body}
                         onChange={(e) => this.setState({body: e.target.value})}
-                        style={{fontFamily: 'Monospace, DejaVu Sans Mono, Fura Mono, Courier, Courier New'}}
+                        style={{
+                            fontFamily: 'Monospace, DejaVu Sans Mono, Fura Mono, Courier, Courier New'
+                        }}
                     ></textarea>
                     <div className="row">
                         {this.colors.map(((color) => {
                             var isCurrent = this.state.color == color;
 
                             return (
-                                <div key={color} className="col s2 m1 l1" style={{padding: '2px'}}>
-                                    <div style={{paddingTop: '100%', backgroundColor: color, border: isCurrent ? '2px solid #000000' : '2px solid #FFFFFF', cursor: 'pointer'}} onClick={() => this.selectColor(color)}></div>
+                                <div
+                                    key={color}
+                                    className="col s2 m1 l1"
+                                    style={{padding: '2px'}}
+                                >
+                                    <div
+                                        style={{
+                                            paddingTop: '100%',
+                                            backgroundColor: color,
+                                            border: isCurrent ? '2px solid #000000' : '2px solid #FFFFFF',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => this.selectColor(color)}
+                                    ></div>
                                 </div>
                             );
                         }).bind(this))}
                     </div>
                 </div>
                 <div className="modal-footer">
-                    <a href="#!" className="modal-action modal-close waves-effect waves-green btn-flat" onClick={this.save.bind(this)}>Save</a>
+                    <a
+                        href="#!"
+                        className="modal-action waves-effect waves-green btn-flat"
+                        onClick={this.save.bind(this)}
+                    >
+                        Save
+                    </a>
                 </div>
             </div>
         );
@@ -214,12 +265,12 @@ class List extends React.Component {
         super();
         this.state = {
             isLoading: true,
-            notes: null
+            notes: []
         };
-        this.refresh();
         list = this;
     }
     refresh(showSpinner) {
+        page.setState({selected: 'list'});
         var self = this;
         if (showSpinner) {
             this.setState({
@@ -229,6 +280,11 @@ class List extends React.Component {
         api.getNotes((res, e) => {
             if (e) {
                 console.log('Error:', e);
+                Materialize.toast('Failed to retrieve notes:<br />' + e.message, 5000);
+                self.setState({
+                    isLoading: false,
+                    notes: []
+                });
             } else {
                 self.setState({
                     isLoading: false,
@@ -246,7 +302,10 @@ class List extends React.Component {
                     <div className="row grid-list">
                         {this.state.notes.map((note) => {
                             return (
-                                <div className="col s12 m6 l4 grid-item" key={note.id.toString()}>
+                                <div
+                                    className="col s12 m6 l4 grid-item"
+                                    key={note.id.toString()}
+                                >
                                     <NoteItem data={note} />
                                 </div>
                             );
@@ -257,17 +316,8 @@ class List extends React.Component {
         }
     }
     componentDidMount() {
-        console.log('mount');
-        var $this = $(ReactDOM.findDOMNode(this));
-        var $grid = $this.find('.grid-list');
-        $grid.packery('destroy');
-        $grid.packery({
-            itemSelector: '.grid-item',
-            gutter: 0,
-            // originLeft: true,
-            // originTop: true
-            // isHorizontal: true
-        });
+        this.refresh();
+        this.initPackery();
 
         // $grid.packery( 'on', 'dragItemPositioned', function( pckryInstance, draggedItem ) {
         //     setTimeout(function(){
@@ -288,7 +338,20 @@ class List extends React.Component {
 
     // }
     componentDidUpdate(prevProps, prevState) {
-        this.componentDidMount();
+        this.initPackery();
+    }
+
+    initPackery() {
+        var $this = $(ReactDOM.findDOMNode(this));
+        var $grid = $this.find('.grid-list');
+        $grid.packery('destroy');
+        $grid.packery({
+            itemSelector: '.grid-item',
+            gutter: 0,
+            // originLeft: true,
+            // originTop: true
+            // isHorizontal: true
+        });
     }
 }
 
@@ -300,28 +363,51 @@ class LoginTab extends React.Component {
             password: ''
         };
     }
+    handleKeyDown(field, event) {
+        if (event.keyCode) {
+
+        }
+    }
     handleChange(field, event) {
         this.setState({[field]: event.target.value});
     }
     authorize() {
+        console.log('auth');
         api.authorize(this.state.username, this.state.password, (result) => {
-            this.props.page.refresh();
+            page.refresh();
         });
     }
     render() {
         return (
             <div>
                 <h1>Log in</h1>
-                <form>
+                <form onSubmit={(e) => { e.preventDefault(); this.authorize(); } }>
                     <div className="input-field">
-                        <input placeholder="Username" id="username" type="text" className="validate" onChange={this.handleChange.bind(this, 'username')} />
+                        <input
+                            placeholder="Username"
+                            id="username" type="text"
+                            className="validate"
+                            onKeyDown={this.handleKeyDown.bind(this, 'username')}
+                            onChange={this.handleChange.bind(this, 'username')}
+                        />
                     </div>
 
                     <div className="input-field">
-                        <input placeholder="Password" id="password" type="password" className="validate" onChange={this.handleChange.bind(this, 'password')} />
+                        <input
+                            placeholder="Password"
+                            id="password"
+                            type="password"
+                            className="validate"
+                            onKeyDown={this.handleKeyDown.bind(this, 'username')}
+                            onChange={this.handleChange.bind(this, 'password')}
+                        />
                     </div>
 
-                    <a className="waves-effect waves-light btn red darken-2" onClick={this.authorize.bind(this)}>Log in</a>
+                    <input
+                        type="submit"
+                        className="waves-effect waves-light btn red darken-2"
+                        value="Log in"
+                    />
                 </form>
             </div>
         );
@@ -331,7 +417,12 @@ class LoginTab extends React.Component {
 class LoadingSpinner extends React.Component {
     render() {
         return (
-            <div className="center-align" style={{paddingTop: '50px'}}>
+            <div
+                className="center-align"
+                style={{
+                    paddingTop: '50px'
+                }}
+            >
                 <div className="preloader-wrapper active">
                     <div className="spinner-layer spinner-red-only">
                         <div className="circle-clipper left">
@@ -370,7 +461,8 @@ class Page extends React.Component {
         api.getAuthorized((isAuthorized) => {
             self.setState({
                 isLoading: false,
-                isAuthorized: isAuthorized
+                isAuthorized: isAuthorized,
+                selected: this.state.selected
             });
         });
         api.poll();
@@ -378,7 +470,8 @@ class Page extends React.Component {
     logOut() {
         api.logOut(() => this.setState({
             isLoading: false,
-            isAuthorized: false
+            isAuthorized: false,
+            selected: this.state.selected
         }));
     }
     render() {
@@ -394,45 +487,77 @@ class Page extends React.Component {
         if (!this.state.isAuthorized) {
             state = 'login';
         }
+        var className = null;
         var content = null;
         if (state == 'list') {
+            className = '';
             content = (
-                <List/>
+                <div className="container">
+                    <List/>
+                </div>
             );
         } else if (state == 'settings') {
+            className = '';
             content = (
-                <h1>Settings (TODO)</h1>
+                <div className="container">
+                    <h1>Settings (TODO)</h1>
+                </div>
             );
         } else if (state == 'login') {
+            className = 'white';
             content = (
-                <LoginTab page={this} />
+                <div className="container">
+                    <LoginTab />
+                </div>
             );
         }
         return (
-            <page>
+            <page className={className}>
                 <Header page={this} />
-                <div className="container">
-                    {content}
-                </div>
+                {content}
             </page>
         );
     }
 }
 
 class App extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            isOnline: true
+        };
+        application = this;
+    }
     render () {
+        var offline = null;
+        console.log(this.state.isOnline ? 'You are now ONLINE' : 'You are now OFFLINE')
+        if (!this.state.isOnline) {
+            offline = (
+                <div className="offline">
+                    <div className="big">
+                        You are offline.
+                    </div>
+                    <div>
+                        We will reconnect automatically once internet connection is regained.
+                    </div>
+                </div>
+            );
+        }
         return (
             <div>
+                {offline}
                 <Page ref={(el) => { page = el }}/>
                 <AddNoteModal ref={(el) => { addNoteModal = el }}/>
             </div>
         );
     }
+    componentDidMount() {
+        api.poll();
+    }
 };
 
-$(document).ready(function(){
-    // the "href" attribute of .modal-trigger must specify the modal ID that wants to be triggered
-    $('.modal').modal();
+$(document).ready(() => {
+    $('.modal').modal({in_duration: 100, out_duration: 100});
 
     $(document).on('mouseenter', '.note-item', (e) => {
         $(e.target).closest('.note-item').addClass('z-depth-4');
@@ -456,7 +581,12 @@ $(document).ready(function(){
         // console.log(event.type);
         // list.refresh();
     });
-    api.poll();
+    api.setStateChangeCallback((isOnline) => {
+        application.setState({isOnline: isOnline});
+        if (isOnline) {
+            list.refresh();
+        }
+    });
 });
 
 ReactDOM.render(

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Peek App</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="../node_modules/tooltipster/dist/css/tooltipster.bundle.min.css" />
     <link rel="stylesheet" type="text/css" href="../node_modules/materialize-css/dist/css/materialize.css" />
 
     <script>
@@ -19,9 +20,22 @@
     <script type="text/javascript" src="../node_modules/react/dist/react.js"></script>
     <script type="text/javascript" src="../node_modules/react-dom/dist/react-dom.js"></script>
     <script type="text/javascript" src="../node_modules/hammerjs/hammer.js"></script>
+    <script type="text/javascript" src="../node_modules/tooltipster/dist/js/tooltipster.bundle.min.js"></script>
     <script type="text/javascript" src="../node_modules/materialize-css/dist/js/materialize.js"></script>
 
     <style type="text/css">
+      page {
+        display: block;
+        min-height: 100vh;
+      }
+      .nav-transparent {
+        background: none !important;
+        box-shadow: none !important;
+      }
+      .nav-transparent a, .nav-transparent ul a {
+        color: #666 !important;
+        /*line-height: 42px !important;*/
+      }
       .note-item h1, .note-item h2, .note-item h3 {
         margin: 0 0 8px;
       }
@@ -54,6 +68,24 @@
           left: 0;
           position: static;
         }
+      }
+      .offline {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #F05040;
+        color: #FFF;
+        text-align: center;
+        text-transform: uppercase;
+        padding: 1rem;
+        z-index: 5000;
+      }
+      .offline .big {
+        text-transform: uppercase;
+        font-size: 1.5rem;
+        padding-bottom: 0.5rem;
+        font-weight: bold;
       }
     </style>
   </head>

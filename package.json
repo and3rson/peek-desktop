@@ -36,6 +36,8 @@
     "materialize-css": "^0.97.8",
     "packery": "^2.1.1",
     "react": "^15.4.0",
-    "react-dom": "^15.4.0"
+    "react-addons-css-transition-group": "^15.4.0",
+    "react-dom": "^15.4.0",
+    "tooltipster": "^4.1.6"
   }
 }

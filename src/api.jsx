@@ -53,18 +53,8 @@ export class Api {
 
     getAuthorized(callback) {
         storage.get('authToken', (error, data) => {
-            if (data.value) {
-                this.request('GET', '/api/notes/', {}, (response, error) => {
-                    if (error) {
-                        console.log('Clearing authToken');
-                        storage.remove('authToken', () => callback(!error));
-                    } else {
-                        callback(!error);
-                    }
-                });
-            } else {
-                callback(false);
-            }
+            console.log(data);
+            callback(!!data.value);
         });
     }
 
@@ -95,9 +85,8 @@ export class Api {
         }, (response, error) => {
             if (error) {
                 console.log('Error creating note:', error);
-            } else {
-                callback();
             }
+            callback(response, error);
         });
     }
 
@@ -108,9 +97,8 @@ export class Api {
         }, (response, error) => {
             if (error) {
                 console.log('Error creating note:', error);
-            } else {
-                callback();
             }
+            callback(response, error);
         });
     }
 
@@ -118,7 +106,11 @@ export class Api {
         this.pollCallback = callback;
     }
 
-    poll() {
+    setStateChangeCallback(callback) {
+        this.stateChangeCallback = callback;
+    }
+
+    poll(hasFailed) {
         var self = this;
         if (this.pollTimeout !== null) {
             window.clearTimeout();
@@ -130,13 +122,20 @@ export class Api {
                 self.request('GET', '/api/notes/poll/', {}, (response, error) => {
                     if (error) {
                         console.log('Polling error. Setting timeout...');
-                        console.log(error);
                         this.pollTimeout = window.setTimeout(() => {
-                            self.poll();
-                        }, 5000);
+                            self.poll(true);
+                        }, 3000);
+                        if (!hasFailed) {
+                            // This error just happened
+                            self.stateChangeCallback(false);
+                        }
                     } else {
                         if (this.pollCallback) {
                             response.events.forEach(self.pollCallback);
+                        }
+                        if (hasFailed) {
+                            // This error just recovered
+                            self.stateChangeCallback(true);
                         }
                         window.setTimeout(() => self.poll(), 0);
                     }
